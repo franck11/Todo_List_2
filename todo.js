@@ -1,38 +1,26 @@
-var taskList = [];
+var taskList = {};
 var uniqueId = 0;
 
 class Task {
   constructor(name, uniqueId){
-    this._name = name;
-    this._uniqueId = uniqueId;
-    this._isDone = false;
-  }
-  get name(){
-    return this._name;
-  }
-  get uniqueId(){
-    return this._uniqueId;
-  }
-  get isDone(){
-    return this._isDone;
-  }
-  set isDone(value){
-    this._isDone = value;
+    this.name = name;
+    this.uniqueId = uniqueId;
+    this.isDone = false;
   }
 }
 
-const addTask = function() {
-  let newTaskString = document.getElementById('todoInput').value;
+function addTask () {
+  let newTaskString = document.getElementById('todo-input').value;
   if(newTaskString !== ''){
     let newTask = new Task(newTaskString, uniqueId);
-    taskList.push(newTask);
+    taskList[uniqueId] = newTask;
     addTaskToList(newTaskString, uniqueId, false);
-    document.getElementById('todoInput').value = '';
+    document.getElementById('todo-input').value = '';
     uniqueId++;
   }
 }
 
-const addTaskToList = function(taskString,taskId,doneStatus) {
+function addTaskToList(taskString, taskId, doneStatus) {
   let newCheckbox = document.createElement('input');
   newCheckbox.type = 'checkbox';
   newCheckbox.checked = doneStatus;
@@ -51,7 +39,7 @@ const addTaskToList = function(taskString,taskId,doneStatus) {
   newButton.appendChild(buttonText);
 
   let newNode = document.createElement('li');
-  let listElement = document.getElementById('taskList');
+  let listElement = document.getElementById('task-list');
   newNode.appendChild(newCheckbox);
   newNode.appendChild(document.createTextNode(taskString));
   newNode.appendChild(newButton);
@@ -59,70 +47,63 @@ const addTaskToList = function(taskString,taskId,doneStatus) {
   listElement.appendChild(newNode);
 }
 
-const changeTaskStatus = function(element) {
-  for(let i = 0; i < taskList.length; i++){
-    if(element.parentElement.id == taskList[i].uniqueId){
-      taskList[i].isDone = !taskList[i].isDone;
-      element.checked ? element.checked = true : element.checked = false;
-    }
+function changeTaskStatus(element) {
+  if(taskList[element.parentElement.id]){
+    taskList[element.parentElement.id].isDone = !taskList[element.parentElement.id].isDone;
   }
 }
 
-const removeTask = function(element) {
-  for(let i = 0; i < taskList.length; i++){
-    if(element.parentElement.id == taskList[i].uniqueId){
-      taskList.splice(i,1);
-      element.parentElement.remove();
-    }
+function removeTask(element) {
+  if(taskList[element.parentElement.id]){
+    delete taskList[element.parentElement.id];
+    element.parentElement.remove();
   }
 }
 
-const emptyCurrentList = function() {
-  let listElement = document.getElementById('taskList');
+function emptyCurrentList() {
+  let listElement = document.getElementById('task-list');
   while(listElement.firstChild){
     listElement.removeChild(listElement.firstChild);
   }
 }
 
-const showAllTasks = function() {
+function showAllTasks() {
   emptyCurrentList();
-  for(let i = 0; i < taskList.length; i++){
-    addTaskToList(taskList[i].name, taskList[i].uniqueId, taskList[i].isDone);
-  }
+  Object.keys(taskList).forEach(function(key){
+    addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
+  });
 }
 
-const showIncompletedTasks = function() {
+function showIncompletedTasks() {
   emptyCurrentList();
-  for(let i = 0; i < taskList.length; i++){
-    if(!taskList[i].isDone){
-      addTaskToList(taskList[i].name, taskList[i].uniqueId, taskList[i].isDone);
+  Object.keys(taskList).forEach(function(key){
+    if(!taskList[key].isDone){
+      addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
     }
-  }
+  });
 }
 
-const showCompletedTasks = function() {
+function showCompletedTasks() {
   emptyCurrentList();
-  for(let i = 0; i < taskList.length; i++){
-    if(taskList[i].isDone){
-      addTaskToList(taskList[i].name, taskList[i].uniqueId, taskList[i].isDone);
+  Object.keys(taskList).forEach(function(key){
+    if(taskList[key].isDone){
+      addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
     }
-  }
+  });
 }
 
-const clearCompleted = function() {
+function clearCompleted() {
   emptyCurrentList();
-  for(let i = taskList.length-1; i >= 0; i--){
-    if(taskList[i].isDone){
-      taskList.splice(i,1);
+  Object.keys(taskList).forEach(function(key){
+    if(taskList[key].isDone){
+      delete taskList[key];
     }
-  }
-  for(let i = 0; i < taskList.length; i++){
-    addTaskToList(taskList[i].name, taskList[i].uniqueId, taskList[i].isDone);
-  }
+  });
+  showAllTasks();
 }
 
 //Add Event Listeners
-document.getElementById('todoInput').addEventListener('keypress', (event) => {
+document.getElementById('todo-input').addEventListener('keypress', (event) => {
   if(event.which === 13){
     addTask();
   }
@@ -130,4 +111,4 @@ document.getElementById('todoInput').addEventListener('keypress', (event) => {
 document.getElementById('all').addEventListener('click', showAllTasks);
 document.getElementById('incompleted').addEventListener('click', showIncompletedTasks);
 document.getElementById('completed').addEventListener('click', showCompletedTasks);
-document.getElementById('clearCompleted').addEventListener('click', clearCompleted);
+document.getElementById('clear-completed').addEventListener('click', clearCompleted);
