@@ -1,0 +1,24 @@
+h1 {
+  font-size : 40px;
+  color : red;
+}
+
+.input-field {
+  height : 50px;
+  width : 400px;
+  font-size : 20px;
+  border-color : black;
+  border-width : 2px;
+}
+
+.key-field {
+  height : 20px;
+  width : 200px;
+  font-size : 10px;
+  border-color : black;
+  border-width : 1px;
+}
+
+.clearButton {
+  width : 30px;
+}
