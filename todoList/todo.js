@@ -10,87 +10,52 @@ class Task {
 }
 
 function saveTodo(){
-  deleteDBInfoByTodoName(document.getElementById('save-key').value);
-  //add todoinstances to DB
+  //TODO list of all string and have the http loop on all of them
+  let keyName = document.getElementById('save-key').value
+  Object.keys(taskList).forEach(function(key){
+    //addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
+    var xhttp = new XMLHttpRequest();
+    var params = 'name=' + taskList[key].name + '&isDone=' + taskList[key.isDone] + '&listId=' + keyName;
+    xhttp.open("POST", 'http://localhost:8080/api/todoInstances', true);
+    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhttp.send(params);
+  });
+  document.getElementById('user-message').innerText = "Save Completed";
+}
+
+function deleteTodo(){
+  let keyName = document.getElementById('save-key').value;
+  if (keyName != ''){
+    let xhttp = new XMLHttpRequest();
+    xhttp.open('DELETE', 'http://localhost:8080/api/todoInstances/listId/' + keyName, true);
+    xhttp.send();
+    document.getElementById('user-message').innerText = "Delete Completed";
+  }else{
+    document.getElementById('user-message').innerText = "Please enter a key to delete your Todo List form the database.";
+  }
 }
 
 function loadTodo(){
-  taskList = {};
-  emptyCurrentList();
   let keyName = document.getElementById('save-key').value;
-  let xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-       let text = xhttp.responseText;
-       let listOfInstance = JSON.parse(text);
-       if(listOfInstance.length <= 1){
-         findTodoInstancesByListId(listOfInstance[0]._id);
-       }else{
-         console.log('ERROR: More than 1 Todo List with the keyId specified found.');
-       }
-    }
-  };
-  xhttp.open('GET', 'http://localhost:8080/api/todoLists/keyId/' + keyName, true);
-  xhttp.send();
-}
-
-function findTodoInstancesByListId(listId){
-  let xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-       let text = xhttp.responseText;
-       let listOfInstance = JSON.parse(text);
-       listOfInstance.forEach(function(instance,index){
-          addTask(instance.name);
-       });
-    }
-  };
-  xhttp.open('GET', 'http://localhost:8080/api/todoInstances/listId/' + listId, true);
-  xhttp.send();
-}
-
-function deleteDBInfoByTodoName(keyName){
-  let xhttp1 = new XMLHttpRequest();
-  xhttp1.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-       let text = xhttp1.responseText;
-       let listOfInstance = JSON.parse(text);
-       if(listOfInstance.length <= 1){
-         let xhttp2 = new XMLHttpRequest();
-         let url1 = 'http://localhost:8080/api/todoLists/keyId/' + listOfInstance[0].keyId;
-         xhttp2.onreadystatechange = function() {
-           if (this.readyState == 4 && this.status == 200) {
-             console.log('Does this work?');
-             let xhttp3 = new XMLHttpRequest();
-             url2 = '/api/todoInstances/listId/' + listOfInstance[0]._id;
-             xhttp3.onreadystatechange = function() {
-               if (this.readyState == 4 && this.status == 200) {
-                 addTodoListToDB(document.getElementById('save-key').value);
-                 //TODO: get request to get the id of the new element  created above^
-                 //TODO: loop of all the todoinstances and add them with a post request.
-               }
-             };
-             xhttp3.open('DELETE', url2, true);
-             xhttp3.send();
-           }
-         };
-         xhttp2.open('DELETE', url1, true);
-         xhttp2.send();
-       }else{
-         console.log('ERROR: More than 1 Todo List with the keyId specified found.');
-       }
-    }
-  };
-  xhttp1.open('GET', 'http://localhost:8080/api/todoLists/keyId/' + keyName, true);
-  xhttp1.send();
-}
-
-function addTodoListToDB(keyName){
-  let xhttp = new XMLHttpRequest();
-  let params = "keyId=" + keyName;
-  xhttp.open("POST", '/api/todoLists', true);
-  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-  xhttp.send(params);
+  if(keyName != ''){
+    taskList = {};
+    emptyCurrentList();
+    let xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+         let text = xhttp.responseText;
+         let listOfInstance = JSON.parse(text);
+         listOfInstance.forEach(function(instance,index){
+            addTask(instance.name);
+         });
+      }
+    };
+    xhttp.open('GET', 'http://localhost:8080/api/todoInstances/listId/' + keyName, true);
+    xhttp.send();
+    document.getElementById('user-message').innerText = "Load Completed";
+  }else{
+    document.getElementById('user-message').innerText = "Please enter a key to save your Todo List.";
+  }
 }
 
 function addTask (taskString) {
@@ -156,6 +121,7 @@ function showAllTasks() {
   Object.keys(taskList).forEach(function(key){
     addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
   });
+  document.getElementById('user-message').innerText = "";
 }
 
 function showIncompletedTasks() {
@@ -165,6 +131,7 @@ function showIncompletedTasks() {
       addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
     }
   });
+  document.getElementById('user-message').innerText = "";
 }
 
 function showCompletedTasks() {
@@ -174,6 +141,7 @@ function showCompletedTasks() {
       addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
     }
   });
+  document.getElementById('user-message').innerText = "";
 }
 
 function clearCompleted() {
@@ -184,6 +152,7 @@ function clearCompleted() {
     }
   });
   showAllTasks();
+  document.getElementById('user-message').innerText = "";
 }
 
 //Add Event Listeners
@@ -198,3 +167,4 @@ document.getElementById('completed').addEventListener('click', showCompletedTask
 document.getElementById('clear-completed').addEventListener('click', clearCompleted);
 document.getElementById('save-todo').addEventListener('click', saveTodo);
 document.getElementById('load-todo').addEventListener('click', loadTodo);
+document.getElementById('delete-todo').addEventListener('click', deleteTodo);
