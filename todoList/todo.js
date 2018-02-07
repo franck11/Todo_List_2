@@ -1,37 +1,68 @@
-var taskList = {};
-var uniqueId = 0;
+let taskList = {};
+let uniqueId = 0;
 
 class Task {
-  constructor(name, uniqueId){
+  constructor(name, uniqueId, status){
     this.name = name;
     this.uniqueId = uniqueId;
-    this.isDone = false;
+    this.isDone = status;
   }
 }
 
-function saveTodo(){
-  //TODO list of all string and have the http loop on all of them
-  let keyName = document.getElementById('save-key').value
+const ALL_TASKS = 0;
+const INCOMPLETE_TASKS = 1;
+const COMPLETE_TASKS = 2;
+
+function showTasks(type){
+  emptyCurrentList();
   Object.keys(taskList).forEach(function(key){
-    //addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
-    var xhttp = new XMLHttpRequest();
-    var params = 'name=' + taskList[key].name + '&isDone=' + taskList[key.isDone] + '&listId=' + keyName;
-    xhttp.open("POST", 'http://localhost:8080/api/todoInstances', true);
-    xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xhttp.send(params);
+    if(type === ALL_TASKS ||
+      (type === INCOMPLETE_TASKS && !taskList[key].isDone) ||
+      (type === COMPLETE_TASKS && taskList[key].isDone)){
+        addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
+      }
   });
-  document.getElementById('user-message').innerText = "Save Completed";
+}
+
+function sendUserStatus(statusString){
+  document.getElementById('user-message').innerText = statusString;
+}
+
+function createXMLHttpRequest(type, path, params, onStateChangeFunction){
+  let xhttp = new XMLHttpRequest();
+  xhttp.open(type, path, true);
+  xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  xhttp.send(params);
+  return xhttp;
+}
+
+function saveTodo(){
+  let keyName = document.getElementById('save-key').value
+  if (keyName != ''){
+    let params = [];
+    let i = 0;
+    Object.keys(taskList).forEach(function(j){
+      params[3*i] = taskList[j].name;
+      params[3*i+1] = taskList[j].isDone;
+      params[3*i+2] = keyName;
+      i++;
+    });
+    let stringifiedParams = 'list=' + JSON.stringify(params);
+    createXMLHttpRequest('POST', 'http://localhost:8080/api/todo', stringifiedParams);
+    sendUserStatus('Save Completed');
+  }else{
+    sendUserStatus('Please enter a key to save your Todo List form to the database.');
+  }
 }
 
 function deleteTodo(){
   let keyName = document.getElementById('save-key').value;
   if (keyName != ''){
-    let xhttp = new XMLHttpRequest();
-    xhttp.open('DELETE', 'http://localhost:8080/api/todoInstances/listId/' + keyName, true);
-    xhttp.send();
-    document.getElementById('user-message').innerText = "Delete Completed";
+    let url = 'http://localhost:8080/api/todo/' + keyName;
+    createXMLHttpRequest('DELETE', url);
+    sendUserStatus('Delete Completed');
   }else{
-    document.getElementById('user-message').innerText = "Please enter a key to delete your Todo List form the database.";
+    sendUserStatus('Please enter a key to delete your Todo List form to the database.');
   }
 }
 
@@ -40,30 +71,33 @@ function loadTodo(){
   if(keyName != ''){
     taskList = {};
     emptyCurrentList();
-    let xhttp = new XMLHttpRequest();
+    let url = 'http://localhost:8080/api/todo/' + keyName;
+    let xhttp = createXMLHttpRequest('GET', url);
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
          let text = xhttp.responseText;
-         let listOfInstance = JSON.parse(text);
-         listOfInstance.forEach(function(instance,index){
-            addTask(instance.name);
-         });
+         try{
+           let listOfInstance = JSON.parse(text);
+           listOfInstance.forEach(function(instance,index){
+              addTask(instance.name, instance.isDone);
+           });
+         }catch(err){
+           sendUserStatus('Loading Failed: ' + err.message);
+         }
       }
+      sendUserStatus('Load Completed');
     };
-    xhttp.open('GET', 'http://localhost:8080/api/todoInstances/listId/' + keyName, true);
-    xhttp.send();
-    document.getElementById('user-message').innerText = "Load Completed";
   }else{
-    document.getElementById('user-message').innerText = "Please enter a key to save your Todo List.";
+    sendUserStatus('Please enter a key to load your Todo List.');
   }
 }
 
-function addTask (taskString) {
+function addTask (taskString, status) {
   let newTaskString = taskString;
   if(newTaskString !== ''){
-    let newTask = new Task(newTaskString, uniqueId);
+    let newTask = new Task(newTaskString, uniqueId, status);
     taskList[uniqueId] = newTask;
-    addTaskToList(newTaskString, uniqueId, false);
+    addTaskToList(newTaskString, uniqueId, status);
     document.getElementById('todo-input').value = '';
     uniqueId++;
   }
@@ -116,34 +150,6 @@ function emptyCurrentList() {
   }
 }
 
-function showAllTasks() {
-  emptyCurrentList();
-  Object.keys(taskList).forEach(function(key){
-    addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
-  });
-  document.getElementById('user-message').innerText = "";
-}
-
-function showIncompletedTasks() {
-  emptyCurrentList();
-  Object.keys(taskList).forEach(function(key){
-    if(!taskList[key].isDone){
-      addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
-    }
-  });
-  document.getElementById('user-message').innerText = "";
-}
-
-function showCompletedTasks() {
-  emptyCurrentList();
-  Object.keys(taskList).forEach(function(key){
-    if(taskList[key].isDone){
-      addTaskToList(taskList[key].name, taskList[key].uniqueId, taskList[key].isDone);
-    }
-  });
-  document.getElementById('user-message').innerText = "";
-}
-
 function clearCompleted() {
   emptyCurrentList();
   Object.keys(taskList).forEach(function(key){
@@ -151,19 +157,19 @@ function clearCompleted() {
       delete taskList[key];
     }
   });
-  showAllTasks();
-  document.getElementById('user-message').innerText = "";
+  showTasks(ALL_TASKS);
+  sendUserStatus('Completed Tasks Removed');
 }
 
 //Add Event Listeners
 document.getElementById('todo-input').addEventListener('keypress', (event) => {
   if(event.which === 13){
-    addTask(document.getElementById('todo-input').value);
+    addTask(document.getElementById('todo-input').value, false);
   }
 });
-document.getElementById('all').addEventListener('click', showAllTasks);
-document.getElementById('incompleted').addEventListener('click', showIncompletedTasks);
-document.getElementById('completed').addEventListener('click', showCompletedTasks);
+document.getElementById('all').addEventListener('click', function() { showTasks(ALL_TASKS) });
+document.getElementById('incompleted').addEventListener('click', function() { showTasks(INCOMPLETE_TASKS) });
+document.getElementById('completed').addEventListener('click', function() { showTasks(COMPLETE_TASKS) });
 document.getElementById('clear-completed').addEventListener('click', clearCompleted);
 document.getElementById('save-todo').addEventListener('click', saveTodo);
 document.getElementById('load-todo').addEventListener('click', loadTodo);

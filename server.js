@@ -6,7 +6,7 @@
  var morgan = require('morgan');                          // log requests to the console (express4)
  var bodyParser = require('body-parser');                 // pull information from HTML POST (express4)
  var methodOverride = require('method-override');         // simulate DELETE and PUT (express4)
- var Promise = require("bluebird");
+ var Promise = require('bluebird');
 
  // configuration =================
 
@@ -33,12 +33,12 @@
 
  // listen (start app with node server.js) ======================================
  app.listen(8080);
- console.log("App listening on port 8080");
+ console.log('App listening on port 8080');
 
 
 // api ---------------------------------------------------------------------
 
-app.get('/api/todoInstances/all', function(req, res) {
+app.get('/api/todos', function(req, res) {
     todoInstanceModel.find({
     }).exec()
     .then((result) => {
@@ -46,7 +46,7 @@ app.get('/api/todoInstances/all', function(req, res) {
     });
 });
 
-app.get('/api/todoInstances/listId/:listId', function(req, res) {
+app.get('/api/todo/:listId', function(req, res) {
     todoInstanceModel.find({
       listId : req.params.listId
     }).exec()
@@ -55,20 +55,33 @@ app.get('/api/todoInstances/listId/:listId', function(req, res) {
     });
 });
 
-app.post('/api/todoInstances', function(req, res) {
-  todoInstanceModel.create({
-     name : req.body.name,
-     isDone : req.body.isDone,
-     listId : req.body.listId
-  })
-  .then(() => {
-    return todoInstanceModel.find({}).exec();
-  }).then((result) => {
-    res.json(result);
+app.post('/api/todo', function(req, res) {
+  let list = JSON.parse(req.body.list);
+  let promiseList = [];
+  for(let i = 0; i < (list.length/3); i++){
+    promiseList[i] = new Promise(function(resolve,reject){
+      todoInstanceModel.update({
+        name : list[i*3],
+        listId : list[(i*3)+2]
+      },{
+        isDone : list[(i*3)+1]
+      },{
+        upsert : true
+      },function(err){});
+      resolve();
+    });
+  }
+  Promise.all(promiseList).then(function(){
+    todoInstanceModel.find({
+      listId : list[2]
+    }).exec()
+    .then((result) => {
+      res.json(result);
+    });
   });
 });
 
-app.delete('/api/todoInstances/all', function(req, res) {
+app.delete('/api/todos', function(req, res) {
   todoInstanceModel.remove({
   }).exec()
   .then(() => {
@@ -78,7 +91,7 @@ app.delete('/api/todoInstances/all', function(req, res) {
   });
 });
 
-app.delete('/api/todoInstances/listId/:listId', function(req, res) {
+app.delete('/api/todo/:listId', function(req, res) {
     todoInstanceModel.remove({
         listId : req.params.listId
     }).exec()
